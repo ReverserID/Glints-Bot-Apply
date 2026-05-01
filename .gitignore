@@ -6,3 +6,4 @@ dist/
 .glints/
 session.json
 .DS_Store
+/.mcp.json

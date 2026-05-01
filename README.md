@@ -1,108 +1,72 @@
 # GlintsAuto
 
-Glints auto-apply bot with a live terminal dashboard, multi-source job feeds,
-post-apply intro-message sending, daily caps, and cron scheduling.
+Auto-apply bot for Glints. TypeScript, terminal UI, cron scheduling.
+Talks to the same mobile API the Android app uses.
 
-Reverse-engineered from the Glints Android app (v1.106.2) by capturing the
-mobile API traffic and porting the relevant flows to a TypeScript client.
+> Educational. Use on your own account. Don't be a dick.
 
-> **Disclaimer**: Use at your own risk. This is unofficial — Glints can change
-> their API at any time, and aggressive automation may violate their ToS.
+## What it does
 
-## Features
+- Pulls jobs from the For-You feed (and "recently added" / nearby as fallbacks).
+- Filters by keywords, job type, work arrangement, min experience, fraud flag.
+- One-tap-applies with answers from a config bank.
+- After each apply, opens the chat channel and sends the saved intro message —
+  same flow as the app.
+- Live terminal dashboard while it runs.
+- Cron scheduler if you want it to keep going.
+- Daily and per-run caps. Random delay between applies.
+- Local history so it doesn't apply to the same job twice.
 
-- **TypeScript** end to end. Strict mode, no `any` in the public surface.
-- **Live TUI dashboard** ([src/tui.ts](src/tui.ts)) with diff-rendered ANSI —
-  no flicker, runs in the alt-screen buffer, recovers on resize.
-- **Auto-apply engine** ([src/engine.ts](src/engine.ts))
-  - Multi-source feeds (round-robin): For-You, For-You "recently added",
-    nearby-by-GPS, easily extensible to more.
-  - Filters: include/exclude keywords, job types, work arrangements,
-    `minYearsOfExperience` cap, `remoteOnly`, fraud-flag and already-applied
-    skipping.
-  - Rate-limited applies with randomized delay between
-    `minDelaySeconds`–`maxDelaySeconds`.
-  - Per-run and per-day apply caps; daily counter is timezone-aware
-    (defaults to `Asia/Jakarta`).
-  - Dedupe via local history (`.glints/history.json`).
-  - Dry-run mode that exercises every step except the final POST.
-- **Post-apply chat flow** mirrors the app: open the chat channel for the new
-  application, then send the user's saved intro message.
-- **Cron scheduler** ([src/scheduler.ts](src/scheduler.ts)) using `node-cron`
-  with timezone support. Re-entrant guard so overlapping ticks skip.
-- **Resume upload** ([src/client.ts](src/client.ts)) via the captured
-  presigned-PUT flow, with a one-call helper that updates the profile.
-- **Persisted session** in `.glints/session.json` so subsequent runs reuse the
-  bearer token.
+No browser automation. No Selenium. Just HTTP.
 
-## Quick start
+## Setup
 
 ```bash
-# 1. Install deps (Node ≥ 18.17)
+# Node 18.17+
 npm install
 
-# 2. Set credentials
 cp .env.example .env
-#   GLINTS_USERNAME=you@example.com
-#   GLINTS_PASSWORD=...
+# fill GLINTS_USERNAME and GLINTS_PASSWORD
 
-# 3. (Optional) tune filters / answers / cron
 cp config.example.json config.json
-
-# 4. Smoke-test
-npx tsx src/cli.ts me
-npx tsx src/cli.ts feed
-
-# 5. Rehearse
-npx tsx src/cli.ts apply --dry-run
-
-# 6. Run for real
-npx tsx src/cli.ts apply
-
-# 7. Run the cron scheduler
-npx tsx src/cli.ts cron
+# tweak filters / answers
 ```
 
-## CLI
+## Run
 
-```
-glints me                      Show the current candidate profile.
-glints feed [-p N -s SIZE]     List the For-You job feed.
-glints apply [--dry-run]       One-shot run with the live TUI dashboard.
-glints apply --no-tui          Plain stdout output instead of TUI.
-glints dashboard               Alias of `apply`.
-glints cron [--once] [--dry-run]
-                               Long-running cron scheduler.
-glints history [-n LIMIT]      Recent applies + today's cap usage.
-glints reset-day               Clear today's local apply history (resets cap).
-glints config                  Print the resolved config.
+```bash
+npx tsx src/cli.ts me              # check login
+npx tsx src/cli.ts feed             # peek at the feed
+npx tsx src/cli.ts apply --dry-run  # rehearse, no real apply
+npx tsx src/cli.ts apply            # do it for real
+npx tsx src/cli.ts cron             # keep running on a schedule
 ```
 
-## Configuration
+## Commands
 
-`config.json` — see [config.example.json](config.example.json):
+```
+me                      show profile
+feed [-p N -s SIZE]     list For-You feed
+apply [--dry-run]       one run, with TUI
+apply --no-tui          one run, plain stdout
+dashboard               alias for apply
+cron [--once]           long-running scheduler
+history [-n N]          recent applies + today's cap
+reset-day               clear today's local history
+config                  print resolved config
+```
+
+## Config
+
+`config.json`. The interesting bits:
 
 ```jsonc
 {
-  "feed": {
-    "pageName": "for_you",
-    "pageSize": 10,
-    "maxPages": 20,
-    "sources": [
-      { "type": "recommend", "pageName": "for_you", "maxPages": 20 },
-      { "type": "recommend", "pageName": "for_you", "recentlyAdded": true, "maxPages": 10 },
-      { "type": "nearby", "maxPages": 10 }
-    ]
-  },
   "filters": {
-    "includeKeywords": ["developer", "engineer", "fullstack", "backend"],
+    "includeKeywords": ["developer", "engineer"],
     "excludeKeywords": ["sales", "marketing", "intern"],
     "jobTypes": ["FULL_TIME", "CONTRACT"],
-    "workArrangements": ["REMOTE", "HYBRID", "ONSITE"],
-    "minYearsOfExperienceMax": 5,
-    "remoteOnly": false,
-    "skipApplied": true,
-    "skipFraudFlagged": true
+    "minYearsOfExperienceMax": 5
   },
   "limits": {
     "maxAppliesPerRun": 20,
@@ -115,37 +79,70 @@ glints config                  Print the resolved config.
     "skill_set_tools": "Expert",
     "skill_set_foreign_language_v2": ["Bahasa Indonesia", "English"]
   },
-  "intro": {
-    "enabled": true
-  },
-  "cron": {
-    "schedule": "0 */2 * * *",
-    "timezone": "Asia/Jakarta"
-  }
+  "intro": { "enabled": true },
+  "cron": { "schedule": "0 */2 * * *", "timezone": "Asia/Jakarta" }
 }
 ```
 
-The `answers` map feeds the one-tap-apply questions. If a job asks something
-not in the bank and the question is required, the engine logs
-`missing-answers:<question_name>` and skips — extend the bank to handle it.
+If a job asks a question not in `answers` and it's required, the bot logs
+`missing-answers:<name>` and skips. Add it to the bank and rerun.
 
-## Project layout
+## How it works
 
 ```
 src/
-├── client.ts       GlintsClient + GlintsApiError (typed)
-├── queries.ts      captured GraphQL operations
-├── types.ts        API response types
-├── config.ts       config loader + .env handling
-├── storage.ts      history + session persistence
+├── client.ts       HTTP client — REST + 2 GraphQL endpoints
+├── queries.ts      captured GraphQL ops
+├── types.ts        response types
+├── config.ts       config + .env
+├── storage.ts      history + session JSON
 ├── filters.ts      job filter rules
-├── answer-bank.ts  one-tap question → answer mapper
-├── engine.ts       auto-apply engine (event-driven)
-├── tui.ts          live ANSI dashboard
-├── scheduler.ts    node-cron loop
-└── cli.ts          commander entry point
+├── answer-bank.ts  question → answer mapping
+├── engine.ts       the actual auto-apply loop
+├── tui.ts          terminal UI (alt-screen, diff render)
+├── scheduler.ts    node-cron wrapper
+└── cli.ts          commander entry
 ```
+
+The engine round-robins across feed sources, dedupes against local history,
+filters, fetches per-job questions, builds answers, submits, then opens the
+chat channel and sends the intro. Events flow through an EventEmitter — the
+TUI and cron logger both subscribe.
+
+## Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /oauth2/token` | Login (password grant) |
+| `POST /api/graphql?op=getMe` | Profile |
+| `GET /v2/api/v3/me/recommend/es/jobs` | For-You feed |
+| `GET /v2/api/nearby/jobs` | Nearby jobs |
+| `POST /v2/api/graphql?op=getOneTapJobApplyQuestions` | Apply questions |
+| `POST /v2/api/v2/jobs/{id}/applications` | Submit application |
+| `POST chat.glints.com/api/channel/start` | Open chat for application |
+| `POST /api/graphql?op=getMessagingIntroMessage` | Get saved intro |
+| `POST chat.glints.com/api/message` | Send intro |
+
+App fingerprint headers it sends:
+
+```
+x-app-platform: ANDROID
+x-app-version: 1.106.2
+x-device-id: <16 hex>
+x-glints-country-code: ID
+x-user-role: CANDIDATE
+user-agent: Dart/3.9 (dart:io)
+```
+
+## Notes
+
+- Mobile APIs are usually cleaner than web scraping. No captcha, stable JSON.
+- Captured with HTTP Toolkit. Easy to redo if Glints ships a new app version.
+- The bot is rate-limited on purpose. Don't lower the delays unless you want
+  your account flagged.
+- Tokens cache in `.glints/session.json`. History in `.glints/history.json`.
+  Nuke the folder to start fresh.
 
 ## License
 
-Private / unlicensed.
+Private.

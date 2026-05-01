@@ -1,0 +1,38 @@
+{
+  "name": "glints-auto",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Glints auto-apply bot with TUI dashboard and cron scheduling.",
+  "type": "module",
+  "bin": {
+    "glints": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "tui": "tsx src/cli.ts dashboard",
+    "apply": "tsx src/cli.ts apply",
+    "cron": "tsx src/cli.ts cron",
+    "me": "tsx src/cli.ts me",
+    "feed": "tsx src/cli.ts feed",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "ora": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  }
+}

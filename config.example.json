@@ -1,0 +1,42 @@
+{
+  "$schema": "./src/config-schema.json",
+  "feed": {
+    "pageName": "for_you",
+    "pageSize": 10,
+    "maxPages": 20,
+    "sources": [
+      { "type": "recommend", "pageName": "for_you", "maxPages": 20 },
+      { "type": "recommend", "pageName": "for_you", "recentlyAdded": true, "maxPages": 10 },
+      { "type": "nearby", "maxPages": 10 }
+    ]
+  },
+  "filters": {
+    "includeKeywords": ["developer", "engineer", "fullstack", "backend"],
+    "excludeKeywords": ["sales", "marketing", "intern"],
+    "jobTypes": ["FULL_TIME", "CONTRACT"],
+    "workArrangements": ["REMOTE", "HYBRID", "ONSITE"],
+    "minYearsOfExperienceMax": 5,
+    "remoteOnly": false,
+    "skipApplied": true,
+    "skipFraudFlagged": true
+  },
+  "limits": {
+    "maxAppliesPerRun": 20,
+    "maxAppliesPerDay": 50,
+    "minDelaySeconds": 4,
+    "maxDelaySeconds": 12
+  },
+  "answers": {
+    "years_of_relevant_experience_v2": "More than 5 years",
+    "skill_set_tools": "Expert",
+    "skill_set_foreign_language_v2": ["Bahasa Indonesia", "English"],
+    "expected_salary_idr": 7000000
+  },
+  "intro": {
+    "enabled": true
+  },
+  "cron": {
+    "schedule": "0 */2 * * *",
+    "timezone": "Asia/Jakarta"
+  }
+}

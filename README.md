@@ -155,44 +155,6 @@ TUI and cron logger both subscribe.
 keywords from your profile periodically, and handles cap/error states so the
 process keeps grinding without intervention.
 
-## Endpoints
-
-| Endpoint | Purpose |
-|---|---|
-| `POST /oauth2/token` | Login (password grant) |
-| `POST /api/graphql?op=getMe` | Profile |
-| `GET /v2/api/v3/me/recommend/es/jobs` | For-You feed |
-| `GET /v2/api/nearby/jobs` | Nearby jobs |
-| `GET /v2/api/experiences?source=PROFILE` | Work experience (for auto-keywords) |
-| `POST /api/graphql?op=jobRolePreferences` | Role preferences (for auto-keywords) |
-| `POST /v2/api/graphql?op=getOneTapJobApplyQuestions` | Apply questions |
-| `POST /v2/api/v2/jobs/{id}/applications` | Submit application |
-| `POST chat.glints.com/api/channel/start` | Open chat for application |
-| `POST /api/graphql?op=getMessagingIntroMessage` | Get saved intro |
-| `POST chat.glints.com/api/message` | Send intro |
-
-App fingerprint headers:
-
-```
-x-app-platform: ANDROID
-x-app-version: 1.106.2
-x-device-id: <16 hex>
-x-glints-country-code: ID
-x-user-role: CANDIDATE
-user-agent: Dart/3.9 (dart:io)
-```
-
-## Notes
-
-- Mobile APIs are usually cleaner than web scraping. No captcha, stable JSON.
-- Captured with HTTP Toolkit. Easy to redo if Glints ships a new app version.
-- The bot is rate-limited on purpose. Don't lower the delays unless you want
-  your account flagged.
-- Tokens cache in `.glints/session.json`. History in `.glints/history.json`.
-  Nuke the folder to start fresh.
-- Day boundaries are computed in `cron.timezone` (default `Asia/Jakarta`),
-  not UTC — so "today" matches the calendar day you actually live in.
-
 ## License
 
 Private.

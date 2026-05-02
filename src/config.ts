@@ -40,6 +40,18 @@ export interface Config {
     schedule: string;
     timezone: string;
   };
+  auto: {
+    /** When the per-run cap hits, sleep this many minutes before next run. */
+    cooldownMinutes: number;
+    /** When NO jobs were applied (feed exhausted), sleep this many minutes. */
+    idleMinutes: number;
+    /** Re-derive keywords from profile every N runs (0 = disable). */
+    refreshKeywordsEvery: number;
+    /** If true, replace `filters.includeKeywords` with auto-derived ones at start of each run. */
+    autoKeywords: boolean;
+    /** Maximum consecutive errors before the loop exits. */
+    maxConsecutiveErrors: number;
+  };
 }
 
 const DEFAULT: Config = {
@@ -76,6 +88,13 @@ const DEFAULT: Config = {
   },
   intro: { enabled: true },
   cron: { schedule: "0 */2 * * *", timezone: "Asia/Jakarta" },
+  auto: {
+    cooldownMinutes: 30,
+    idleMinutes: 20,
+    refreshKeywordsEvery: 5,
+    autoKeywords: true,
+    maxConsecutiveErrors: 5,
+  },
 };
 
 export function loadConfig(path = "config.json"): Config {
@@ -93,6 +112,7 @@ export function loadConfig(path = "config.json"): Config {
     answers: { ...DEFAULT.answers, ...(user.answers ?? {}) },
     intro: { ...DEFAULT.intro, ...(user.intro ?? {}) },
     cron: { ...DEFAULT.cron, ...(user.cron ?? {}) },
+    auto: { ...DEFAULT.auto, ...(user.auto ?? {}) },
   };
 }
 

@@ -342,11 +342,41 @@ export class Engine extends EventEmitter {
                   }
                 }
               } catch (e) {
-                const msg = e instanceof GlintsApiError
-                  ? `HTTP ${e.status ?? "?"}: ${typeof e.body === "string" ? e.body : JSON.stringify(e.body)}`
-                  : (e as Error).message;
-                summary.failed++; bumpReason("apply-failed");
-                this.emitEvent({ type: "apply-failed", job, error: msg });
+                // The API returns 409 CONFLICT when the user has already
+                // applied to this job (visible/invisible to local history).
+                // Treat that as "already applied" — record it locally so we
+                // never retry, and count it as a skip rather than a failure.
+                const isAlreadyApplied =
+                  e instanceof GlintsApiError && (
+                    e.status === 409 ||
+                    (typeof e.body === "object" && e.body !== null &&
+                      (((e.body as { error?: { code?: string } }).error?.code === "CONFLICT") ||
+                       JSON.stringify(e.body).toLowerCase().includes("previously applied")))
+                  );
+
+                if (isAlreadyApplied) {
+                  this.history.add({
+                    jobId: job.id,
+                    title: job.title,
+                    company: job.Company?.displayName ?? job.Company?.name ?? "—",
+                    appliedAt: new Date().toISOString(),
+                    status: "ALREADY_APPLIED",
+                    applicationId:
+                      (e as GlintsApiError).body && typeof (e as GlintsApiError).body === "object"
+                        ? ((e as GlintsApiError).body as { data?: { applicationId?: string } }).data?.applicationId
+                        : undefined,
+                    source: "ANDROID",
+                    traceInfo: job.traceInfo,
+                  });
+                  summary.skipped++; bumpReason("already-applied-server");
+                  this.emitEvent({ type: "skipped", job, reason: "already-applied-server (409)" });
+                } else {
+                  const msg = e instanceof GlintsApiError
+                    ? `HTTP ${e.status ?? "?"}: ${typeof e.body === "string" ? e.body : JSON.stringify(e.body)}`
+                    : (e as Error).message;
+                  summary.failed++; bumpReason("apply-failed");
+                  this.emitEvent({ type: "apply-failed", job, error: msg });
+                }
               }
             }
 

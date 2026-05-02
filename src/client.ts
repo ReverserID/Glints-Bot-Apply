@@ -332,6 +332,21 @@ export class GlintsClient {
 
   // ---------- bookmarks ----------
 
+  async getExperiences(source = "PROFILE"): Promise<{ data?: { works?: Array<{ jobTitle?: string; jobRoleName?: string; orgName?: string; skills?: Array<{ name: string }> }> } } & Record<string, unknown>> {
+    await this.ensureAuth();
+    const qs = new URLSearchParams({ source });
+    return this._request(`/v2/api/experiences?${qs}`, {
+      role: "CANDIDATE",
+      op: "getExperiences",
+    });
+  }
+
+  async jobRolePreferences(): Promise<{ jobRolePreferences: Array<{ id: string; HierarchicalJobCategoryId?: string; hierarchicalJobCategory?: { id: string; name: string; level: number } }> }> {
+    await this.ensureAuth();
+    const { Q_JOB_ROLE_PREFERENCES_FULL } = await import("./queries.js");
+    return this.gql("jobRolePreferences", Q_JOB_ROLE_PREFERENCES_FULL);
+  }
+
   async getBookmarkedJobs(args: { limit?: number; offset?: number } = {}): Promise<{ getBookmarkedJobs: { totalJobs: number } }> {
     await this.ensureAuth();
     const { limit = 50, offset = 0 } = args;

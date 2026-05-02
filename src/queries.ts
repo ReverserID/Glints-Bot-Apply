@@ -70,3 +70,20 @@ export const M_UPDATE_MESSAGING_INTRO_MESSAGE = `mutation updateMessagingIntroMe
     __typename userId message updatedAt
   }
 }`;
+
+export const Q_JOB_ROLE_PREFERENCES_FULL = `query jobRolePreferences {
+  __typename
+  jobRolePreferences {
+    __typename
+    id
+    HierarchicalJobCategoryId
+    hierarchicalJobCategory { __typename id name level }
+  }
+}`;
+
+export const Q_HIERARCHICAL_JOB_CATEGORIES_FULL = `query hierarchicalJobCategories {
+  __typename
+  hierarchicalJobCategories {
+    __typename id name level parentId
+  }
+}`;

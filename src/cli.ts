@@ -9,6 +9,8 @@ import { Engine } from "./engine.js";
 import { History, SessionStore } from "./storage.js";
 import { Dashboard } from "./tui.js";
 import { startCron } from "./scheduler.js";
+import { AutoLoop } from "./auto.js";
+import { deriveKeywords } from "./auto-keywords.js";
 
 const program = new Command();
 
@@ -158,6 +160,49 @@ program
     process.on("SIGINT", () => { handle.stop(); persistSession(c); process.exit(0); });
     // keep process alive
     await new Promise<void>(() => undefined);
+  });
+
+// ---------- auto (24/7) ----------
+program
+  .command("auto")
+  .description("Run forever: auto keywords from profile, auto-loop with cooldowns, auto-resume at next midnight when cap hits.")
+  .option("--dry-run", "do everything except submit applications", false)
+  .option("--no-tui", "plain console output instead of TUI")
+  .action(async (opts) => {
+    const cfg = loadConfig(program.opts().config as string);
+    const c = makeClient();
+    const ctrl = new AbortController();
+    const onSig = () => { ctrl.abort(); };
+    process.on("SIGINT", onSig);
+    process.on("SIGTERM", onSig);
+
+    const loop = new AutoLoop({
+      client: c,
+      config: cfg,
+      dryRun: !!opts.dryRun,
+      tui: opts.tui !== false,
+      signal: ctrl.signal,
+    });
+    try { await loop.run(); } finally { persistSession(c); }
+  });
+
+// ---------- keywords (preview auto-derived) ----------
+program
+  .command("keywords")
+  .description("Preview the keywords auto-derived from your profile.")
+  .action(async () => {
+    const c = makeClient();
+    const s = ora("Deriving keywords from profile…").start();
+    try {
+      const me = await c.getMe();
+      const d = await deriveKeywords(c, me);
+      persistSession(c);
+      s.succeed(`Derived ${d.filtered.length} keywords (titles=${d.source.titles}, skills=${d.source.skills}, categories=${d.source.categories}, intro=${d.source.intro})`);
+      console.log(d.filtered.join(", "));
+    } catch (e) {
+      s.fail((e as Error).message);
+      process.exitCode = 1;
+    }
   });
 
 // ---------- history ----------

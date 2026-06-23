@@ -153,9 +153,14 @@ export class AutoLoop {
         } else {
           engine.on("event", (raw: unknown) => {
             const e = raw as EngineEvent;
-            if (e.type === "applied") this.banner(chalk.green(`✓ ${e.job.title} @ ${e.job.Company?.displayName ?? "?"}`));
+            if (e.type === "me") this.banner(chalk.dim(`profile: ${e.me.firstName} ${e.me.lastName} (${e.me.applicationsCount} prev applies)`));
+            else if (e.type === "page") this.banner(chalk.dim(`[${e.sourceLabel}] page ${e.page} → ${e.got} jobs`));
+            else if (e.type === "applying") this.banner(chalk.blue(`… applying ${e.job.title} @ ${e.job.Company?.displayName ?? "?"}`));
+            else if (e.type === "applied") this.banner(chalk.green(`✓ ${e.job.title} @ ${e.job.Company?.displayName ?? "?"}`));
+            else if (e.type === "skipped") this.banner(chalk.dim(`- skip ${e.job.title}: ${e.reason}`));
             else if (e.type === "apply-failed") this.banner(chalk.red(`✗ ${e.job.title}: ${e.error}`));
             else if (e.type === "intro-sent") this.banner(chalk.cyan(`✉ intro sent → ${e.job.title}`));
+            else if (e.type === "limit-reached") this.banner(chalk.yellow(`limit ${e.scope}=${e.count}`));
             else if (e.type === "log" && e.level !== "info") this.banner(chalk.yellow(`${e.level}: ${e.message}`));
           });
           summary = await engine.run();

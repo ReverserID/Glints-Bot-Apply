@@ -69,6 +69,17 @@ const DEFAULTS = {
   timeoutMs: 30_000,
 };
 
+// A GraphQL response carries auth failures as a 200 + errors array. Detect the
+// UNAUTHORIZED / "please login first" case so callers can re-login and retry.
+function isUnauthorizedGql(errs: unknown): boolean {
+  if (!Array.isArray(errs)) return false;
+  return errs.some((e) => {
+    const code = (e as { extensions?: { code?: string } })?.extensions?.code;
+    const msg = (e as { message?: string })?.message ?? "";
+    return code === "UNAUTHORIZED" || code === "UNAUTHENTICATED" || /login first/i.test(msg);
+  });
+}
+
 export class GlintsApiError extends Error {
   status?: number;
   body?: unknown;
@@ -185,7 +196,7 @@ export class GlintsClient {
     return parsed as T;
   }
 
-  private async _gql<T>(path: string, operationName: string, query: string, variables: Record<string, unknown> = {}, opts: { role?: UserRole } = {}): Promise<T> {
+  private async _gql<T>(path: string, operationName: string, query: string, variables: Record<string, unknown> = {}, opts: { role?: UserRole; retryOnAuth?: boolean } = {}): Promise<T> {
     const data = await this._request<{ data?: T; errors?: unknown }>(`${path}?op=${operationName}`, {
       method: "POST",
       body: { operationName, variables, query },
@@ -194,6 +205,14 @@ export class GlintsClient {
     });
     if (data && (data as { errors?: unknown }).errors) {
       const errs = (data as { errors: unknown }).errors;
+      // GraphQL auth failures return HTTP 200 with an UNAUTHORIZED error (e.g.
+      // a stale/expired token in session.json), so the _request 401 retry never
+      // fires. Detect it here and re-login once before giving up.
+      const retryOnAuth = opts.retryOnAuth ?? true;
+      if (retryOnAuth && this.username && this.password && isUnauthorizedGql(errs)) {
+        await this.login();
+        return this._gql(path, operationName, query, variables, { ...opts, retryOnAuth: false });
+      }
       let detail = "";
       try { detail = `: ${JSON.stringify(errs)}`; } catch { /* ignore */ }
       throw new GlintsApiError(`GraphQL error in ${operationName}${detail}`, {

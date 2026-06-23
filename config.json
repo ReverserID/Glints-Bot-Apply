@@ -11,7 +11,24 @@
     ]
   },
   "filters": {
-    "includeKeywords": ["developer", "engineer", "fullstack", "backend"],
+    "includeKeywords": [
+      "developer","Remote", "engineer", "fullstack", "full stack", "full-stack", "backend", "back end", "back-end",
+      "frontend", "front end", "front-end", "software", "programmer", "coder", "web developer", "mobile developer",
+      "android", "ios", "react", "react native", "vue", "angular", "next", "nextjs", "node", "nodejs", "express",
+      "javascript", "typescript", "python", "java", "golang", "go developer", "php", "laravel", "codeigniter",
+      "ruby", "rails", "rust", "kotlin", "swift", "flutter", "dart", "c#", ".net", "dotnet", "spring", "springboot",
+      "django", "flask", "fastapi", "graphql", "rest api", "api developer", "microservices",
+      "devops", "sre", "site reliability", "cloud", "aws", "gcp", "azure", "kubernetes", "docker", "terraform",
+      "ci/cd", "platform engineer", "infrastructure", "system engineer", "system analyst", "systems engineer",
+      "data engineer", "data scientist", "data analyst", "machine learning", "ml engineer", "ai engineer",
+      "deep learning", "nlp", "computer vision", "big data", "etl", "data warehouse",
+      "database", "dba", "sql", "postgres", "mysql", "mongodb", "redis",
+      "qa", "quality assurance", "tester", "automation", "test engineer", "sdet",
+      "security", "cybersecurity", "pentest", "penetration", "infosec", "blockchain", "web3", "smart contract",
+      "embedded", "iot", "firmware", "game developer", "unity", "unreal",
+      "technical", "it support", "it staff", "network engineer", "solution architect", "software architect",
+      "tech lead", "engineering manager", "scrum master", "product engineer"
+    ],
     "excludeKeywords": ["sales", "marketing", "intern"],
     "jobTypes": ["FULL_TIME", "CONTRACT"],
     "workArrangements": ["REMOTE", "HYBRID", "ONSITE"],

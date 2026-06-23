@@ -16,6 +16,8 @@ export function decideJob(job: RecommendedJob, cfg: Config["filters"]): FilterDe
   if (job.status && job.status !== "OPEN") {
     return { ok: false, reason: `status=${job.status}` };
   }
+  // applyAll: skip every content filter below; only the safety checks above run.
+  if (cfg.applyAll) return { ok: true };
   if (cfg.remoteOnly && !job.isRemote) {
     return { ok: false, reason: "not-remote" };
   }

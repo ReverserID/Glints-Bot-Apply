@@ -98,9 +98,11 @@ program
   .command("apply")
   .description("Run a single auto-apply pass with the live TUI dashboard.")
   .option("--dry-run", "do everything except submit applications", false)
+  .option("--apply-all", "ignore keyword/type/arrangement filters — apply to every job", false)
   .option("--no-tui", "plain console output instead of TUI")
   .action(async (opts) => {
     const cfg = loadConfig(program.opts().config as string);
+    if (opts.applyAll) cfg.filters.applyAll = true;
     const c = makeClient();
     const ctrl = new AbortController();
     const onSig = () => { ctrl.abort(); };
@@ -145,9 +147,11 @@ program
   .command("cron")
   .description("Start a long-running scheduler that triggers auto-apply on a cron expression.")
   .option("--dry-run", "do everything except submit applications", false)
+  .option("--apply-all", "ignore keyword/type/arrangement filters — apply to every job", false)
   .option("--once", "run a single tick now and exit", false)
   .action(async (opts) => {
     const cfg = loadConfig(program.opts().config as string);
+    if (opts.applyAll) cfg.filters.applyAll = true;
     const c = makeClient();
     if (opts.once) {
       const engine = new Engine({ client: c, config: cfg, dryRun: !!opts.dryRun });
@@ -167,9 +171,11 @@ program
   .command("auto")
   .description("Run forever: auto keywords from profile, auto-loop with cooldowns, auto-resume at next midnight when cap hits.")
   .option("--dry-run", "do everything except submit applications", false)
+  .option("--apply-all", "ignore keyword/type/arrangement filters — apply to every job", false)
   .option("--no-tui", "plain console output instead of TUI")
   .action(async (opts) => {
     const cfg = loadConfig(program.opts().config as string);
+    if (opts.applyAll) cfg.filters.applyAll = true;
     const c = makeClient();
     const ctrl = new AbortController();
     const onSig = () => { ctrl.abort(); };

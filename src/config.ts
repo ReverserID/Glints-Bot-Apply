@@ -22,6 +22,8 @@ export interface Config {
     remoteOnly: boolean;
     skipApplied: boolean;
     skipFraudFlagged: boolean;
+    /** Bypass all content filters (keywords/type/arrangement/remote/exp) and apply to every job. Safety skips (fraud, already-applied, closed) still apply. */
+    applyAll: boolean;
   };
   limits: {
     maxAppliesPerRun: number;
@@ -74,6 +76,7 @@ const DEFAULT: Config = {
     remoteOnly: false,
     skipApplied: true,
     skipFraudFlagged: true,
+    applyAll: false,
   },
   limits: {
     maxAppliesPerRun: 20,

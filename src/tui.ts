@@ -10,8 +10,15 @@
 
 import chalk from "chalk";
 import Table from "cli-table3";
+import figlet from "figlet";
+import gradient from "gradient-string";
 import type { Engine, EngineEvent, RunSummary } from "./engine.js";
 import type { MeFragment, RecommendedJob } from "./types.js";
+
+// Brand gradient — cyan→magenta, matches Glints' neon vibe.
+const brand = gradient(["#00e0ff", "#7b5cff", "#ff4db1"]);
+const fire = gradient(["#ffd200", "#ff7b00", "#ff2d55"]);
+const cool = gradient(["#00ffa3", "#00e0ff"]);
 
 interface Row {
   job: RecommendedJob;
@@ -44,9 +51,24 @@ export class Dashboard {
   private dirty = true;
   private inAltScreen = false;
   private resizeHandler: (() => void) | null = null;
+  private bannerLines: string[] = [];
 
   constructor(opts: { dryRun?: boolean } = {}) {
     this.dryRun = opts.dryRun ?? false;
+    this.buildBanner();
+  }
+
+  // Render the ASCII-art logo once (figlet is sync) and pre-apply the brand
+  // gradient per line so each frame just reuses the cached strings.
+  private buildBanner(): void {
+    let art: string;
+    try {
+      art = figlet.textSync("GLINTS", { font: "ANSI Shadow" });
+    } catch {
+      art = figlet.textSync("GLINTS"); // fallback to default font
+    }
+    const rows = art.replace(/\n+$/, "").split("\n");
+    this.bannerLines = rows.map((l) => brand(l));
   }
 
   attach(engine: Engine): void {
@@ -186,6 +208,8 @@ export class Dashboard {
 
   private buildFrame(): string[] {
     const lines: string[] = [];
+    // ASCII-art banner (cached, gradient pre-applied)
+    lines.push(...this.bannerLines);
     // Header
     lines.push(...this.renderHeader());
     lines.push("");
@@ -194,13 +218,21 @@ export class Dashboard {
     for (const l of table.split("\n")) lines.push(l);
     lines.push("");
     // Logs
-    lines.push(chalk.bold("Logs"));
+    lines.push(cool("▍ Logs"));
     if (!this.logs.length) {
       lines.push(chalk.dim("  (no events yet)"));
     } else {
       for (const l of this.logs) lines.push(l);
     }
     return lines;
+  }
+
+  // Unicode block progress bar for applied/scanned.
+  private progressBar(done: number, total: number, width = 24): string {
+    const ratio = total > 0 ? Math.min(1, done / total) : 0;
+    const filled = Math.round(ratio * width);
+    const bar = cool("█".repeat(filled)) + chalk.dim("░".repeat(width - filled));
+    return `${bar} ${chalk.bold(`${Math.round(ratio * 100)}%`)}`;
   }
 
   private render(): void {
@@ -249,16 +281,18 @@ export class Dashboard {
     const who = this.me ? `${this.me.firstName} ${this.me.lastName}` : "...";
 
     const stats = this.finalSummary ?? this.liveStats();
-    const banner = chalk.bold.cyan("⟢ Glints Auto-Apply") + dry;
-    const right = chalk.dim(`elapsed ${m}:${s}`);
-    const top = `${sp}  ${banner}  ${chalk.dim("·")}  ${chalk.bold(who)}  ${chalk.dim("·")}  ${right}`;
+    const subtitle = brand("⟢ Auto-Apply Engine") + dry;
+    const right = chalk.dim(`⏱ ${m}:${s}`);
+    const top = `${sp}  ${subtitle}  ${chalk.dim("·")}  ${chalk.bold.white(who)}  ${chalk.dim("·")}  ${right}`;
     const counts =
-      chalk.dim(`page ${this.currentPage}  ·  scanned ${stats.scanned}  ·  `) +
-      chalk.green(`applied ${stats.applied}`) + chalk.dim("  ·  ") +
-      chalk.cyan(`intros ${stats.introsSent}`) + chalk.dim("  ·  ") +
-      chalk.yellow(`skipped ${stats.skipped}`) + chalk.dim("  ·  ") +
-      chalk.red(`failed ${stats.failed}`);
-    return [top, counts];
+      chalk.dim(`page ${this.currentPage}   `) +
+      chalk.green(`● applied ${chalk.bold(stats.applied)}`) + "   " +
+      chalk.cyan(`✉ intros ${chalk.bold(stats.introsSent)}`) + "   " +
+      chalk.yellow(`▲ skipped ${chalk.bold(stats.skipped)}`) + "   " +
+      chalk.red(`✗ failed ${chalk.bold(stats.failed)}`) + "   " +
+      chalk.dim(`scanned ${stats.scanned}`);
+    const progress = chalk.dim("apply ") + this.progressBar(stats.applied, stats.scanned || 1);
+    return [top, counts, progress];
   }
 
   private introsSent = 0;
@@ -276,40 +310,87 @@ export class Dashboard {
 
   private renderTable(): string {
     const t = new Table({
-      head: [chalk.bold("State"), chalk.bold("Job"), chalk.bold("Company"), chalk.bold("Type"), chalk.bold("Note")],
-      colWidths: [10, 36, 22, 10, 36],
+      head: [cool("◆ State"), cool("Job"), cool("Company"), cool("Type"), cool("Note")],
+      colWidths: [11, 34, 20, 15, 24],
       wordWrap: false,
-      style: { head: [], border: ["gray"] },
+      style: { head: [], border: ["cyan"] },
+      chars: {
+        top: "─", "top-mid": "┬", "top-left": "╭", "top-right": "╮",
+        bottom: "─", "bottom-mid": "┴", "bottom-left": "╰", "bottom-right": "╯",
+        left: "│", "left-mid": "├", mid: "─", "mid-mid": "┼", right: "│", "right-mid": "┤",
+        middle: "│",
+      },
     });
     if (!this.rows.length) {
       t.push([chalk.dim("—"), chalk.dim("waiting for jobs…"), "", "", ""]);
     }
     for (const row of this.rows) {
+      const titleColor = row.state === "applied" ? chalk.white.bold
+        : row.state === "failed" ? chalk.red
+        : row.state === "skipped" ? chalk.dim
+        : chalk.white;
       t.push([
         this.stateBadge(row.state),
-        truncate(row.job.title, 34),
-        truncate(row.job.Company?.displayName ?? row.job.Company?.name ?? "—", 20),
-        chalk.dim(row.job.type ?? ""),
-        chalk.dim(truncate(row.applicationId ?? row.reason ?? "", 34)),
+        titleColor(truncate(row.job.title, 32)),
+        chalk.cyan(truncate(row.job.Company?.displayName ?? row.job.Company?.name ?? "—", 18)),
+        this.typeBadge(row.job.type),
+        this.noteCell(row),
       ]);
     }
     return t.toString();
   }
 
+  // Job type → colored glyph + short label (width-1 glyphs keep table aligned).
+  private typeBadge(type?: string): string {
+    switch ((type ?? "").toUpperCase()) {
+      case "FULL_TIME":     return chalk.green("● Full-time");
+      case "PART_TIME":     return chalk.cyan("◐ Part-time");
+      case "CONTRACT":      return chalk.yellow("▣ Contract");
+      case "INTERNSHIP":    return chalk.blue("✎ Intern");
+      case "PROJECT_BASED": return chalk.magenta("◈ Project");
+      case "FREELANCE":     return chalk.white("✦ Freelance");
+      case "TEMPORARY":     return chalk.gray("⧗ Temp");
+      case "DAILY":         return chalk.gray("☀ Daily");
+      default:              return chalk.dim(type ? `• ${titleCase(type)}` : "—");
+    }
+  }
+
+  // Humanize the Note column — drop raw UUIDs, map reasons to icon + text.
+  private noteCell(row: Row): string {
+    if (row.state === "applied") return chalk.green("✓ submitted");
+    if (row.state === "applying") return chalk.blue("… sending");
+    if (row.state === "scanning") return chalk.dim("scanning…");
+    const r = row.reason ?? "";
+    if (r.startsWith("fraud")) return chalk.red("⚠ fraud-flagged");
+    if (r.startsWith("already-in-history")) return chalk.gray("↻ already applied");
+    if (r.startsWith("already-applied")) return chalk.gray("↻ already applied");
+    if (r.startsWith("no-include-keyword")) return chalk.yellow("✗ off-keyword");
+    if (r.startsWith("excluded")) return chalk.yellow(`✗ ${r.replace("excluded:", "excl ")}`);
+    if (r.startsWith("type=")) return chalk.yellow(`✗ type ${r.slice(5)}`);
+    if (r.startsWith("arrangement=")) return chalk.yellow(`✗ ${r.slice(12)}`);
+    if (r.startsWith("status=")) return chalk.yellow(`✗ ${r.slice(7).toLowerCase()}`);
+    if (r.startsWith("not-remote")) return chalk.yellow("✗ on-site");
+    if (r.startsWith("min-exp")) return chalk.yellow(`✗ exp ${r.replace("min-exp=", "")}y`);
+    if (r.startsWith("missing-answers")) return chalk.yellow("✎ needs info");
+    if (r.startsWith("questions-failed")) return chalk.red("✗ form error");
+    if (row.state === "failed") return chalk.red(`✗ ${truncate(r, 30)}`);
+    return chalk.dim(truncate(r, 32));
+  }
+
   private stateBadge(state: Row["state"]): string {
     switch (state) {
-      case "scanning": return chalk.cyan("scan");
-      case "applying": return chalk.cyan(`${SPINNER[this.spinnerFrame]} apply`);
-      case "applied":  return chalk.green("✓ apply");
-      case "skipped":  return chalk.yellow("skip");
-      case "failed":   return chalk.red("✗ fail");
+      case "scanning": return chalk.bgCyan.black.bold(" SCAN ");
+      case "applying": return chalk.bgBlue.white.bold(`${SPINNER[this.spinnerFrame]} APPLY`);
+      case "applied":  return chalk.bgGreen.black.bold(" ✓ DONE");
+      case "skipped":  return chalk.bgYellow.black.bold(" SKIP ");
+      case "failed":   return chalk.bgRed.white.bold(" ✗ FAIL");
     }
   }
 
   private renderSummary(s: RunSummary): string {
     const lines: string[] = [];
-    lines.push(chalk.bold("Summary"));
-    lines.push(`  scanned: ${s.scanned}    applied: ${chalk.green(s.applied)}    intros: ${chalk.cyan(s.introsSent)}    skipped: ${chalk.yellow(s.skipped)}    failed: ${chalk.red(s.failed)}`);
+    lines.push(fire("═══ RUN SUMMARY ═══"));
+    lines.push(`  scanned ${chalk.bold(s.scanned)}   ${chalk.green(`● applied ${chalk.bold(s.applied)}`)}   ${chalk.cyan(`✉ intros ${chalk.bold(s.introsSent)}`)}   ${chalk.yellow(`▲ skipped ${chalk.bold(s.skipped)}`)}   ${chalk.red(`✗ failed ${chalk.bold(s.failed)}`)}`);
     if (this.limitNotice) {
       lines.push(chalk.bgYellow.black(` ${this.limitNotice} `));
     }
@@ -324,6 +405,10 @@ export class Dashboard {
     }
     return lines.join("\n");
   }
+}
+
+function titleCase(s: string): string {
+  return s.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function truncate(s: string, n: number): string {

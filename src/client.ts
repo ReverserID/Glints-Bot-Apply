@@ -193,8 +193,11 @@ export class GlintsClient {
       op: operationName,
     });
     if (data && (data as { errors?: unknown }).errors) {
-      throw new GlintsApiError(`GraphQL error in ${operationName}`, {
-        body: (data as { errors: unknown }).errors,
+      const errs = (data as { errors: unknown }).errors;
+      let detail = "";
+      try { detail = `: ${JSON.stringify(errs)}`; } catch { /* ignore */ }
+      throw new GlintsApiError(`GraphQL error in ${operationName}${detail}`, {
+        body: errs,
         op: operationName,
       });
     }

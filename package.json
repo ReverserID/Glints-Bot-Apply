@@ -18,7 +18,11 @@
     "keywords": "tsx src/cli.ts keywords",
     "me": "tsx src/cli.ts me",
     "feed": "tsx src/cli.ts feed",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop glints-auto",
+    "pm2:restart": "pm2 restart glints-auto",
+    "pm2:logs": "pm2 logs glints-auto"
   },
   "engines": {
     "node": ">=18.17"

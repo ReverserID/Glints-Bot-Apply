@@ -1,6 +1,17 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { randomBytes } from "node:crypto";
 import "dotenv/config";
+
+/**
+ * Generate a random Android-style device id: 16 lowercase hex chars (8 bytes),
+ * matching the format Glints' app uses. Stable per install — generate ONCE and
+ * persist it (session.json); do NOT regenerate per request, or the server sees
+ * every call as a new device and the token/session binding breaks.
+ */
+export function genDeviceId(): string {
+  return randomBytes(8).toString("hex");
+}
 
 export type FeedSource =
   | { type: "recommend"; pageName?: string; recentlyAdded?: boolean; maxPages?: number; pageSize?: number }
@@ -122,7 +133,8 @@ export function loadConfig(path = "config.json"): Config {
 export function envCreds() {
   const username = process.env.GLINTS_USERNAME;
   const password = process.env.GLINTS_PASSWORD;
-  const deviceId = process.env.GLINTS_DEVICE_ID || "2582a15c363f2e50";
+  // Empty when unset — makeClient resolves env > persisted session > generated.
+  const deviceId = process.env.GLINTS_DEVICE_ID || "";
   if (!username || !password) {
     throw new Error("Missing GLINTS_USERNAME or GLINTS_PASSWORD env vars (copy .env.example to .env).");
   }

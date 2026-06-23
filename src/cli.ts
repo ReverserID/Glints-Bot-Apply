@@ -4,7 +4,7 @@ import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
 import { GlintsClient } from "./client.js";
-import { envCreds, loadConfig } from "./config.js";
+import { envCreds, genDeviceId, loadConfig } from "./config.js";
 import { Engine } from "./engine.js";
 import { History, SessionStore } from "./storage.js";
 import { Dashboard } from "./tui.js";
@@ -21,9 +21,17 @@ program
 
 function makeClient(): GlintsClient {
   const env = envCreds();
-  const session = new SessionStore().load();
-  const c = new GlintsClient(env);
+  const store = new SessionStore();
+  const session = store.load();
+  // Device id resolution: GLINTS_DEVICE_ID env override > persisted (session.json)
+  // > freshly generated. Generated once, then persisted so it stays stable
+  // across runs (a per-request id would break the session binding).
+  const deviceId = env.deviceId || session.deviceId || genDeviceId();
+  const c = new GlintsClient({ ...env, deviceId });
   if (session.accessToken) c.importSession({ accessToken: session.accessToken, refreshToken: session.refreshToken ?? null });
+  // Persist immediately so a newly generated id sticks even if the run aborts
+  // before the first successful request.
+  if (!session.deviceId || session.deviceId !== deviceId) persistSession(c);
   return c;
 }
 

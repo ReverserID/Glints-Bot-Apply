@@ -60,7 +60,7 @@ const DEFAULTS = {
   baseUrl: "https://api.glints.com",
   chatUrl: "https://chat.glints.com",
   clientId: "5e5c566a-5ac6-44e3-b286-3246fbc97bfb",
-  appVersion: "1.106.2",
+  appVersion: "1.112.3",
   appPlatform: "ANDROID" as EAppPlatform,
   osVersion: "9",
   countryCode: "ID",
@@ -248,6 +248,7 @@ export class GlintsClient {
           grant_type: "password",
           client_id: this.clientId,
           sessionId: this.deviceId,
+          role: "CANDIDATE",
         },
         retryOn401: false,
         op: "login",
@@ -283,7 +284,17 @@ export class GlintsClient {
   }
 
   async checkAppVersion(version = this.appVersion, platform: EAppPlatform = this.appPlatform): Promise<unknown> {
-    return this.gql("checkMobileAppVersionCompatibility", Q_CHECK_VERSION, { version, platform });
+    const [major = 0, minor = 0, patch = 0] = version.split(".").map((n) => parseInt(n, 10) || 0);
+    return this.gql("checkMobileAppVersionCompatibility", Q_CHECK_VERSION, {
+      input: {
+        major,
+        minor,
+        patch,
+        countryCode: this.countryCode,
+        platform,
+        appUpdateUserRole: "CANDIDATE",
+      },
+    });
   }
 
   // ---------- jobs ----------

@@ -27,10 +27,21 @@ export const Q_GET_ENABLED_FEATURE_FLAGS = `query getEnabledFeatureFlags {
   getEnabledFeatureFlags { __typename flags }
 }`;
 
-export const Q_CHECK_VERSION = `query checkMobileAppVersionCompatibility($version: String!, $platform: EAppPlatform!) {
+export const Q_CHECK_VERSION = `query checkMobileAppVersionCompatibility($input: VersionCompatibilityInput!) {
   __typename
-  checkMobileAppVersionCompatibility(version: $version, platform: $platform) {
-    __typename isCompatible isLatest minimumSupportedVersion latestVersion
+  checkMobileAppVersionCompatibility(input: $input) {
+    __typename
+    status
+    mobileAppVersion {
+      __typename
+      id
+      level
+      summary
+      description
+      major
+      minor
+      patch
+    }
   }
 }`;
 

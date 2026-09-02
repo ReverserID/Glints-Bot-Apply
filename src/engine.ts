@@ -6,7 +6,7 @@ import { EventEmitter } from "node:events";
 import { GlintsClient, GlintsApiError } from "./client.js";
 import type { Config, FeedSource } from "./config.js";
 import { decideJob } from "./filters.js";
-import { buildAnswers, isBlocking } from "./answer-bank.js";
+import { buildAnswers, isBlocking, pickGeneratedAnswers } from "./answer-bank.js";
 import { History } from "./storage.js";
 import type { MeFragment, RecommendedJob } from "./types.js";
 
@@ -293,6 +293,21 @@ export class Engine extends EventEmitter {
               summary.skipped++; bumpReason("missing-answers");
               this.emitEvent({ type: "skipped", job, reason: `missing-answers:${missing}` });
               continue;
+            }
+
+            // Job screening questions (generatedQuestions) — auto-pick last option
+            // for single-choice, all options for multi-choice. Best-effort: if the
+            // call fails or the job has none, we apply with just the one-tap answers.
+            try {
+              const hq = await this.client.getJobHiringQuestions(job.id);
+              const generated = hq.getJobHiringQuestions?.generatedQuestions ?? [];
+              const picked = pickGeneratedAnswers(generated, this.cfg.answers);
+              const seen = new Set(plan.answers.map((a) => a.QuestionName));
+              for (const a of picked) {
+                if (!seen.has(a.QuestionName)) plan.answers.push(a);
+              }
+            } catch (e) {
+              this.log("warn", `hiring-questions failed for ${job.id}: ${(e as Error).message}`);
             }
 
             this.emitEvent({ type: "applying", job });

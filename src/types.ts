@@ -118,6 +118,32 @@ export interface OneTapApplyQuestionsResponse {
   };
 }
 
+export interface HiringPredefinedQuestion {
+  name: string;
+  type: string;
+  required: string; // REQUIRED | OPTIONAL | HIDDEN
+  value?: Record<string, unknown>;
+}
+
+export interface HiringGeneratedQuestion {
+  name: string;
+  type: string;
+  label?: string;
+  labelLokaliseKey?: string;
+  responseOptions?: { value: string; lokaliseKey?: string }[];
+}
+
+export interface JobHiringQuestions {
+  shouldShowMismatchWarning: boolean;
+  predefinedQuestions: HiringPredefinedQuestion[];
+  generatedQuestions: HiringGeneratedQuestion[];
+  employerScreeningQuestions: unknown[];
+}
+
+export interface JobHiringQuestionsResponse {
+  getJobHiringQuestions: JobHiringQuestions;
+}
+
 export interface ApplyAnswer {
   QuestionName: string;
   answer: string | string[] | number | boolean;

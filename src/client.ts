@@ -6,6 +6,7 @@ import {
   Q_GET_ENABLED_FEATURE_FLAGS,
   Q_CHECK_VERSION,
   Q_ONE_TAP_APPLY_QUESTIONS,
+  Q_GET_JOB_HIRING_QUESTIONS,
   Q_GET_BOOKMARKED_JOBS,
   Q_IS_QUALIFIED_TO_APP_REVIEW,
   Q_GET_MESSAGING_INTRO_MESSAGE,
@@ -22,6 +23,7 @@ import type {
   MessagingIntroMessage,
   OAuthTokenResponse,
   OneTapApplyQuestionsResponse,
+  JobHiringQuestionsResponse,
   RecommendedJob,
   RecommendedJobsResponse,
   UserRole,
@@ -328,6 +330,11 @@ export class GlintsClient {
   async getOneTapApplyQuestions(jobId: string): Promise<OneTapApplyQuestionsResponse> {
     await this.ensureAuth();
     return this.gqlV2("getOneTapJobApplyQuestions", Q_ONE_TAP_APPLY_QUESTIONS, { jobId });
+  }
+
+  async getJobHiringQuestions(jobId: string, variant?: string): Promise<JobHiringQuestionsResponse> {
+    await this.ensureAuth();
+    return this.gql("getJobHiringQuestions", Q_GET_JOB_HIRING_QUESTIONS, { jobId, variant });
   }
 
   async getNearbyJobs(args: { latitude: number; longitude: number; page?: number; pageSize?: number; jobCategoryId?: string }): Promise<RecommendedJobsResponse> {

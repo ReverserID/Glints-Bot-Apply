@@ -53,6 +53,59 @@ export const Q_ONE_TAP_APPLY_QUESTIONS = `query getOneTapJobApplyQuestions($jobI
   }
 }`;
 
+export const Q_GET_JOB_HIRING_QUESTIONS = `query getJobHiringQuestions($jobId: UUID!, $variant: EApplicationFormConfigByJobCategoryVariantType) {
+  __typename
+  getJobHiringQuestions(jobId: $jobId, variant: $variant) {
+    __typename
+    shouldShowMismatchWarning
+    predefinedQuestions {
+      __typename
+      name
+      type
+      required
+      value {
+        __typename
+        ... on UserCareerInfo { isCareerStartDateFilled doesUserWorkExperienceRecordExist }
+        ... on UserPastJobRolesInfo { isCareerStartDateFilled doesUserWorkExperienceRecordExist }
+        ... on UserContactNumber { whatsappNumber isWhatsappNumberFilled }
+        ... on Gender { gender }
+        ... on BirthDate { birthDate }
+        ... on EducationLevel { educationLevel }
+        ... on UserResume { resume }
+        ... on UserProfilePicture { profilePicture }
+        ... on MonthlySalaryExpectation { min max }
+        ... on UserLocation { location }
+        ... on UserLocationWithGPS { locationId gps { __typename latitude longitude } }
+        ... on UserSkillsInfo { hasSkills }
+        ... on UserLatestEducationExperience { hasEducationExperience }
+      }
+    }
+    generatedQuestions {
+      __typename
+      name
+      type
+      label
+      labelLokaliseKey
+      responseOptions { __typename value lokaliseKey }
+    }
+    employerScreeningQuestions {
+      __typename
+      label
+      labelLokaliseVariables { __typename key value }
+      labelLokaliseKey
+      questionType
+      name
+      questions {
+        __typename
+        id
+        subLabel
+        subLabelLokaliseKey
+        responseOptions { __typename value lokaliseKey mappedValue }
+      }
+    }
+  }
+}`;
+
 export const Q_GET_BOOKMARKED_JOBS = `query getBookmarkedJobs($data: GetBookmarkJobsInput!) {
   __typename
   getBookmarkedJobs(data: $data) { __typename totalJobs }
